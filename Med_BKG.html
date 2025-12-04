@@ -1,0 +1,556 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="common cold">common cold</option>
+                                
+                                    <option value="Shortness of breath">Shortness of breath</option>
+                                
+                                    <option value="Low iron">Low iron</option>
+                                
+                                    <option value="anemia">anemia</option>
+                                
+                                    <option value="Stiff neck">Stiff neck</option>
+                                
+                                    <option value="Headache">Headache</option>
+                                
+                                    <option value="flu">flu</option>
+                                
+                                    <option value="shortness of breath">shortness of breath</option>
+                                
+                                    <option value="Rash">Rash</option>
+                                
+                                    <option value="Wheezing">Wheezing</option>
+                                
+                                    <option value="Fever">Fever</option>
+                                
+                                    <option value="Sneezing">Sneezing</option>
+                                
+                                    <option value="asthma">asthma</option>
+                                
+                                    <option value="Cough">Cough</option>
+                                
+                                    <option value="Fatigue">Fatigue</option>
+                                
+                                    <option value="Anemia">Anemia</option>
+                                
+                                    <option value="meningitis">meningitis</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "rgb(145,210,206)", "id": "common cold", "label": "common cold", "shape": "box", "size": 21.666666666666668, "title": "Node: common cold\nReliability: 0.583\nAvg Confidence: 0.595\nEdges: 2"}, {"color": "rgb(174,201,247)", "id": "Shortness of breath", "label": "Shortness of breath", "shape": "box", "size": 20.0, "title": "Node: Shortness of breath\nReliability: 0.500\nAvg Confidence: 0.514\nEdges: 1"}, {"color": "rgb(106,222,151)", "id": "Low iron", "label": "Low iron", "shape": "box", "size": 23.5, "title": "Node: Low iron\nReliability: 0.675\nAvg Confidence: 0.703\nEdges: 1"}, {"color": "rgb(134,213,190)", "id": "anemia", "label": "anemia", "shape": "box", "size": 21.333333333333332, "title": "Node: anemia\nReliability: 0.567\nAvg Confidence: 0.627\nEdges: 2"}, {"color": "rgb(147,209,209)", "id": "Stiff neck", "label": "Stiff neck", "shape": "box", "size": 23.0, "title": "Node: Stiff neck\nReliability: 0.650\nAvg Confidence: 0.590\nEdges: 1"}, {"color": "rgb(163,205,231)", "id": "Headache", "label": "Headache", "shape": "box", "size": 19.5, "title": "Node: Headache\nReliability: 0.475\nAvg Confidence: 0.547\nEdges: 1"}, {"color": "rgb(147,209,209)", "id": "flu", "label": "flu", "shape": "box", "size": 21.25, "title": "Node: flu\nReliability: 0.562\nAvg Confidence: 0.589\nEdges: 3"}, {"color": "rgb(136,213,193)", "id": "shortness of breath", "label": "shortness of breath", "shape": "box", "size": 22.0, "title": "Node: shortness of breath\nReliability: 0.600\nAvg Confidence: 0.620\nEdges: 1"}, {"color": "rgb(168,203,239)", "id": "Rash", "label": "Rash", "shape": "box", "size": 20.5, "title": "Node: Rash\nReliability: 0.525\nAvg Confidence: 0.531\nEdges: 1"}, {"color": "rgb(145,210,206)", "id": "Wheezing", "label": "Wheezing", "shape": "box", "size": 23.0, "title": "Node: Wheezing\nReliability: 0.650\nAvg Confidence: 0.595\nEdges: 1"}, {"color": "rgb(155,207,220)", "id": "Fever", "label": "Fever", "shape": "box", "size": 20.666666666666664, "title": "Node: Fever\nReliability: 0.533\nAvg Confidence: 0.568\nEdges: 2"}, {"color": "rgb(140,212,198)", "id": "Sneezing", "label": "Sneezing", "shape": "box", "size": 22.5, "title": "Node: Sneezing\nReliability: 0.625\nAvg Confidence: 0.610\nEdges: 1"}, {"color": "rgb(160,206,227)", "id": "asthma", "label": "asthma", "shape": "box", "size": 22.0, "title": "Node: asthma\nReliability: 0.600\nAvg Confidence: 0.555\nEdges: 2"}, {"color": "rgb(147,209,209)", "id": "Cough", "label": "Cough", "shape": "box", "size": 20.666666666666664, "title": "Node: Cough\nReliability: 0.533\nAvg Confidence: 0.590\nEdges: 2"}, {"color": "rgb(162,205,229)", "id": "Fatigue", "label": "Fatigue", "shape": "box", "size": 18.5, "title": "Node: Fatigue\nReliability: 0.425\nAvg Confidence: 0.550\nEdges: 1"}, {"color": "rgb(136,213,193)", "id": "Anemia", "label": "Anemia", "shape": "box", "size": 22.0, "title": "Node: Anemia\nReliability: 0.600\nAvg Confidence: 0.620\nEdges: 1"}, {"color": "rgb(163,204,231)", "id": "meningitis", "label": "meningitis", "shape": "box", "size": 21.25, "title": "Node: meningitis\nReliability: 0.562\nAvg Confidence: 0.545\nEdges: 3"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "color": "rgb(138,116,0)", "from": "Fever", "label": "indicates", "title": "Fever indicates flu\nOriginal: 0.70\nBayesian: 0.62\nUncertainty: 0.0673", "to": "flu", "width": 3.4799999999999995}, {"arrows": "to", "color": "rgb(145,109,0)", "from": "Cough", "label": "indicates", "title": "Cough indicates flu\nOriginal: 0.60\nBayesian: 0.60\nUncertainty: 0.0516", "to": "flu", "width": 3.4}, {"arrows": "to", "color": "rgb(165,89,0)", "from": "Headache", "label": "indicates", "title": "Headache indicates flu\nOriginal: 0.45\nBayesian: 0.55\nUncertainty: 0.0439", "to": "flu", "width": 3.1870967741935483}, {"arrows": "to", "color": "rgb(176,78,0)", "from": "Fever", "label": "indicates", "title": "Fever indicates meningitis\nOriginal: 0.40\nBayesian: 0.52\nUncertainty: 0.0376", "to": "meningitis", "width": 3.0601769911504424}, {"arrows": "to", "color": "rgb(149,105,0)", "from": "Stiff neck", "label": "indicates", "title": "Stiff neck indicates meningitis\nOriginal: 0.80\nBayesian: 0.59\nUncertainty: 0.0326", "to": "meningitis", "width": 3.359533073929961}, {"arrows": "to", "color": "rgb(170,84,0)", "from": "Rash", "label": "associated_with", "title": "Rash associated_with meningitis\nOriginal: 0.55\nBayesian: 0.53\nUncertainty: 0.0692", "to": "meningitis", "width": 3.123076923076923}, {"arrows": "to", "color": "rgb(142,112,0)", "from": "Sneezing", "label": "indicates", "title": "Sneezing indicates common cold\nOriginal: 0.75\nBayesian: 0.61\nUncertainty: 0.0280", "to": "common cold", "width": 3.44}, {"arrows": "to", "color": "rgb(153,101,0)", "from": "Cough", "label": "indicates", "title": "Cough indicates common cold\nOriginal: 0.50\nBayesian: 0.58\nUncertainty: 0.0250", "to": "common cold", "width": 3.319543509272468}, {"arrows": "to", "color": "rgb(163,91,0)", "from": "Fatigue", "label": "indicates", "title": "Fatigue indicates anemia\nOriginal: 0.35\nBayesian: 0.55\nUncertainty: 0.0236", "to": "anemia", "width": 3.1999999999999997}, {"arrows": "to", "color": "rgb(108,146,0)", "from": "Low iron", "label": "causes", "title": "Low iron causes anemia\nOriginal: 0.85\nBayesian: 0.70\nUncertainty: 0.0616", "to": "anemia", "width": 3.813612565445026}, {"arrows": "to", "color": "rgb(138,116,0)", "from": "Anemia", "label": "leads_to", "title": "Anemia leads_to shortness of breath\nOriginal: 0.70\nBayesian: 0.62\nUncertainty: 0.0673", "to": "shortness of breath", "width": 3.4799999999999995}, {"arrows": "to", "color": "rgb(176,78,0)", "from": "Shortness of breath", "label": "associated_with", "title": "Shortness of breath associated_with asthma\nOriginal: 0.50\nBayesian: 0.51\nUncertainty: 0.0555", "to": "asthma", "width": 3.0571428571428574}, {"arrows": "to", "color": "rgb(147,107,0)", "from": "Wheezing", "label": "indicates", "title": "Wheezing indicates asthma\nOriginal: 0.80\nBayesian: 0.60\nUncertainty: 0.0210", "to": "asthma", "width": 3.380952380952381}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": true, "solver": "forceAtlas2Based", "avoidOverlap": 0.5}, "interaction": {"navigationButtons": true, "keyboard": true}, "nodes": {"size": 15}, "edges": {"width": 2, "smooth": true, "font": {"size": 15, "align": "top"}}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
